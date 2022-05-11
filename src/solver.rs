@@ -38,22 +38,6 @@ pub fn solver(row: &mut Vec<Cell>, clue: &RowClue) {
 }
 
 fn single_row_solver(row: &mut Vec<Cell>, clue: Clue) {
-    // if clue == 0 {
-    //     for cell in row {
-    //         *cell = Some(false);
-    //     }
-    // }
-    // if clue as usize == row.len() {
-    //     for cell in row {
-    //         *cell = Some(true);
-    //     }
-    // }
-    // // We only have one clue so is any cell filled and can act as anchors?
-    // let min_anchor = None;
-    // let max_anchor = None;
-    // let mut iter = row.iter().enumerate().peekable();
-    // // We skip until
-    // iter = iter.skip_while(predicate);
     let mut possible = Vec::new();
     let spacing = row.len() - clue as usize;
     'option_looker: for i in 0..spacing {
@@ -169,30 +153,27 @@ fn recursive_option_finder(
     current: &[Cell],
     options: &mut Vec<Vec<Cell>>,
 ) {
-    if max_len == previous.len() {
-        return;
-    }
     let clue = match clues.get(0) {
         Some(v) => *v,
         None => return,
     };
     let clues = &clues[1..];
-    let len_remaining = max_len - previous.len() - (clue as usize);
-    // We must also mark atleast 1 space between all remaining clues
-    let len_remaining = if clues.is_empty() {
-        len_remaining
+
+    let space_remaining = max_len - previous.len() - (clue as usize);
+
+    // If theres more clues remaining we subtract them, and minimum 1 space between
+    let space_remaining = if clues.is_empty() {
+        space_remaining
     } else {
-        len_remaining - (clues.len() - 1)
+        let clue_len: u8 = clues.iter().sum();
+        let space_between = clues.len() - 1;
+        space_remaining - (clue_len as usize) - space_between
     };
+
     // The first clue does not require any spacing
     let min = if previous.is_empty() { 0 } else { 1 };
-    // If we need 1 space, and the minimum is 1, we do exactly 1 run with 1 len
-    // let range = if len_remaining == 1 && min == 1 {
-    //     1..2
-    // } else {
-    //     min..len_remaining
-    // };
-    'len_examiner: for i in min..=len_remaining {
+
+    'len_examiner: for i in min..=space_remaining {
         let mut row = previous.to_vec();
         let relevant_current = &current[row.len()..];
         let mut current_iter = relevant_current.iter();
