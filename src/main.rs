@@ -1,18 +1,13 @@
-mod board;
-mod solver;
+use picross_solver_lib::solve;
 
 fn main() {
-    let mut board = board::Board::parse(
+    let (board, steps) = match solve(
         "8.1,1.1,1.1,1,1,1.1,1.1,1.1,3,1.1,5.1,2.8,1",
         "10.1,1.1,1.1,1,2,1.1,2,1.1,1,2,1.1,1,1.10.1.1",
-    )
-    .unwrap();
-    println!("Start: \n{}", board);
-    board.low_hanging();
-    println!("2: \n{}", board);
-    board.solve_step();
-    println!("3: \n{}", board);
-    board.solve_step();
-    println!("End: \n{}", board);
+    ) {
+        Some(v) => v,
+        None => return,
+    };
+    println!("After {steps} steps: \n{}", board);
     println!("Ok")
 }

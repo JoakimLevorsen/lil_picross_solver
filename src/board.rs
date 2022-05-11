@@ -24,7 +24,7 @@ impl RowClue {
                     Some(v) => {
                         let mut out = vec![first, v];
                         for v in numbers {
-                            out.push(v)
+                            out.push(v);
                         }
                         RowClue::Group(out)
                     }
@@ -65,21 +65,21 @@ impl Board {
         for x in 0..self.board[0].len() {
             // Add the elements
             for y in 0..self.board.len() {
-                row.push(self.board[y][x])
+                row.push(self.board[y][x]);
             }
             solver::low_hanging(&mut row, &self.clue_col[x]);
             // Write them back
-            for y in 0..self.board.len() {
-                self.board[y][x] = row[y]
+            for (y, cell) in row.drain(..).enumerate() {
+                self.board[y][x] = cell;
             }
-            row.clear()
+            row.clear();
         }
     }
 
     pub fn solve_step(&mut self) {
         // Rows
         for (row, clue) in self.board.iter_mut().zip(self.clue_row.iter()) {
-            solver(row, clue)
+            solver(row, clue);
         }
         // Columns
         let columns = self.board[0].len();
@@ -87,7 +87,7 @@ impl Board {
         let mut col = Vec::with_capacity(columns);
         for (x, clue) in self.clue_col.iter().enumerate() {
             for y in 0..rows {
-                col.push(self.board[y][x])
+                col.push(self.board[y][x]);
             }
             solver(&mut col, clue);
             // Then we write this back into the board
@@ -95,6 +95,53 @@ impl Board {
                 self.board[y][x] = val;
             }
         }
+    }
+
+    pub fn solved_percentage(&self) -> f32 {
+        let unknown = self
+            .board
+            .iter()
+            .flat_map(|row| row.iter())
+            .filter(|cell| matches!(cell, Cell::Unknown))
+            .count();
+        let total_cells = self.board.len() * self.board[0].len();
+        (unknown as f32) / (total_cells as f32)
+    }
+
+    pub fn export(&self) -> Option<Vec<Vec<bool>>> {
+        let mut rows = Vec::with_capacity(self.board.len());
+        for row in &self.board {
+            let mut export_row = Vec::with_capacity(row.len());
+            for cell in row {
+                export_row.push(match cell {
+                    Cell::Filled => true,
+                    Cell::Blocked => false,
+                    Cell::Unknown => return None,
+                });
+            }
+            rows.push(export_row);
+        }
+        Some(rows)
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn export_js(&self) -> Option<js_sys::Array> {
+        let rows = js_sys::Array::new_with_length(self.board.len() as u32);
+        for row in &self.board {
+            let export_row = js_sys::Array::new_with_length(row.len() as u32);
+            for cell in row {
+                export_row.push(
+                    &match cell {
+                        Cell::Filled => true,
+                        Cell::Blocked => false,
+                        Cell::Unknown => return None,
+                    }
+                    .into(),
+                );
+            }
+            rows.push(&export_row);
+        }
+        Some(rows)
     }
 }
 

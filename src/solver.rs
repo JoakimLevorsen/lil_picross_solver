@@ -4,12 +4,12 @@ pub fn low_hanging(row: &mut Vec<Cell>, clue: &RowClue) {
     match clue {
         RowClue::Single(v) if *v == 0 => {
             for cell in row {
-                *cell = Cell::Blocked
+                *cell = Cell::Blocked;
             }
         }
         RowClue::Single(v) if *v as usize == row.len() => {
             for cell in row {
-                *cell = Cell::Filled
+                *cell = Cell::Filled;
             }
         }
         RowClue::Group(clues)
@@ -23,7 +23,7 @@ pub fn low_hanging(row: &mut Vec<Cell>, clue: &RowClue) {
             });
 
             for (cell, value) in row.iter_mut().zip(zippable) {
-                *cell = value
+                *cell = value;
             }
         }
         _ => (),
@@ -87,8 +87,10 @@ fn single_row_solver(row: &mut Vec<Cell>, clue: Clue) {
     for possible in possible {
         for (combined, add) in combined.iter_mut().zip(possible.into_iter()) {
             *combined = match (*combined, add) {
-                (Cell::Blocked, Cell::Filled) | (Cell::Filled, Cell::Blocked) => Cell::Unknown,
-                (Cell::Unknown, _) | (_, Cell::Unknown) => Cell::Unknown,
+                (Cell::Blocked, Cell::Filled)
+                | (Cell::Filled, Cell::Blocked)
+                | (Cell::Unknown, _)
+                | (_, Cell::Unknown) => Cell::Unknown,
                 (Cell::Filled, Cell::Filled) => Cell::Filled,
                 (Cell::Blocked, Cell::Blocked) => Cell::Blocked,
             }
@@ -101,7 +103,7 @@ fn single_row_solver(row: &mut Vec<Cell>, clue: Clue) {
             (Cell::Blocked, Cell::Filled) | (Cell::Filled, Cell::Blocked) => {
                 panic!("Tried to fuck something up here")
             }
-            v @ (Cell::Filled, Cell::Filled) | v @ (Cell::Blocked, Cell::Blocked) => v.0,
+            v @ ((Cell::Filled, Cell::Filled) | (Cell::Blocked, Cell::Blocked)) => v.0,
         }
     }
 }
@@ -127,8 +129,10 @@ fn multi_row_solver(row: &mut Vec<Cell>, clue: &[Clue]) {
     for possible in options {
         for (combined, add) in combined.iter_mut().zip(possible.into_iter()) {
             *combined = match (*combined, add) {
-                (Cell::Blocked, Cell::Filled) | (Cell::Filled, Cell::Blocked) => Cell::Unknown,
-                (Cell::Unknown, _) | (_, Cell::Unknown) => Cell::Unknown,
+                (Cell::Blocked, Cell::Filled)
+                | (Cell::Filled, Cell::Blocked)
+                | (Cell::Unknown, _)
+                | (_, Cell::Unknown) => Cell::Unknown,
                 (Cell::Filled, Cell::Filled) => Cell::Filled,
                 (Cell::Blocked, Cell::Blocked) => Cell::Blocked,
             }
@@ -141,7 +145,7 @@ fn multi_row_solver(row: &mut Vec<Cell>, clue: &[Clue]) {
             (Cell::Blocked, Cell::Filled) | (Cell::Filled, Cell::Blocked) => {
                 panic!("Tried to fuck something up here")
             }
-            v @ (Cell::Filled, Cell::Filled) | v @ (Cell::Blocked, Cell::Blocked) => v.0,
+            v @ ((Cell::Filled, Cell::Filled) | (Cell::Blocked, Cell::Blocked)) => v.0,
         }
     }
 }
@@ -205,7 +209,7 @@ fn recursive_option_finder(
             options.push(row);
         } else {
             // We continue recursively
-            recursive_option_finder(clues, max_len, &row, current, options)
+            recursive_option_finder(clues, max_len, &row, current, options);
         }
     }
 }
