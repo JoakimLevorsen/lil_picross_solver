@@ -224,7 +224,6 @@
         alert("All column clues must be filled by comma seperated values");
         return;
       }
-      console.log([row, column]);
       const solution = solve_js(row, column);
       console.log(solution);
       if (solution instanceof Array) {
@@ -232,7 +231,6 @@
           for (const [x, cell] of row.entries()) {
             const cellElement = cells[y][x];
             cellElement.className = cell ? "full" : "empty";
-            console.log([cell, cellElement]);
           }
         }
       }
