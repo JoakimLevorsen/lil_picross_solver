@@ -32,3 +32,8 @@ pub fn solve(clues_row: &str, clues_col: &str) -> Option<(Board, u32)> {
     }
     Some((board, steps))
 }
+
+#[wasm_bindgen]
+pub fn init_panic_hook() {
+    console_error_panic_hook::set_once();
+}

@@ -14,24 +14,24 @@ pub enum RowClue {
 }
 
 impl RowClue {
-    pub fn parse(input: &str) -> Vec<RowClue> {
-        input
-            .split('.')
-            .map(|s| {
-                let mut numbers = s.split(',').map(|number| number.parse().unwrap());
-                let first = numbers.next().unwrap();
-                match numbers.next() {
-                    Some(v) => {
-                        let mut out = vec![first, v];
-                        for v in numbers {
-                            out.push(v);
-                        }
-                        RowClue::Group(out)
+    pub fn parse(input: &str) -> Option<Vec<RowClue>> {
+        let mut clues = Vec::new();
+        for clue in input.split('.') {
+            let mut numbers = clue.split(',');
+            let first: u8 = numbers.next()?.parse().ok()?;
+            clues.push(match numbers.next() {
+                Some(v) => {
+                    let v = v.parse().ok()?;
+                    let mut out = vec![first, v];
+                    for v in numbers {
+                        out.push(v.parse().ok()?);
                     }
-                    None => RowClue::Single(first),
+                    RowClue::Group(out)
                 }
-            })
-            .collect()
+                None => RowClue::Single(first),
+            });
+        }
+        Some(clues)
     }
 }
 
@@ -43,8 +43,8 @@ pub struct Board {
 
 impl Board {
     pub fn parse(clue_row: &str, clue_col: &str) -> Option<Board> {
-        let clue_row = RowClue::parse(clue_row);
-        let clue_col = RowClue::parse(clue_col);
+        let clue_row = RowClue::parse(clue_row)?;
+        let clue_col = RowClue::parse(clue_col)?;
         let width = clue_row.len();
         let height = clue_col.len();
         Some(Board {
@@ -127,11 +127,12 @@ impl Board {
     #[allow(clippy::cast_possible_truncation)]
     pub fn export_js(&self) -> Option<js_sys::Array> {
         let rows = js_sys::Array::new_with_length(self.board.len() as u32);
-        for row in &self.board {
+        for (y, row) in self.board.iter().enumerate() {
             let export_row = js_sys::Array::new_with_length(row.len() as u32);
-            for cell in row {
-                export_row.push(
-                    &match cell {
+            for (x, cell) in row.iter().enumerate() {
+                export_row.set(
+                    x as u32,
+                    match cell {
                         Cell::Filled => true,
                         Cell::Blocked => false,
                         Cell::Unknown => return None,
@@ -139,7 +140,7 @@ impl Board {
                     .into(),
                 );
             }
-            rows.push(&export_row);
+            rows.set(y as u32, export_row.into());
         }
         Some(rows)
     }

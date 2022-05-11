@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Picross solver</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+      body {
+        --grid-size: min(78vh, 78vw);
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      table {
+        height: var(--grid-size);
+        width: var(--grid-size);
+        display: flex;
+        flex-direction: column;
+      }
+
+      table > tr {
+        display: inline-flex;
+        flex-direction: row;
+        flex: 1;
+      }
+
+      table > tr > * {
+        flex: 1;
+        flex-basis: 0;
+        border: 0;
+        margin: 0;
+        padding: 0;
+        margin-right: 5px;
+        margin-bottom: 5px;
+      }
+
+      input {
+        min-width: 0px;
+        background-color: rgb(208, 208, 208);
+        text-align: center;
+      }
+
+      tr > div {
+        border-radius: 4px;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 25px;
+        display: table;
+      }
+
+      tr > div::after {
+        display: table-cell;
+        vertical-align: middle;
+      }
+
+      .full {
+        background-color: rgb(47, 47, 47);
+      }
+
+      .empty {
+        background-color: white;
+      }
+
+      .empty::after {
+        content: "X";
+      }
+
+      .unknown::after {
+        content: "?";
+        height: 100%;
+        width: 100%;
+        line-height: 100%;
+      }
+
+      .sizeContainer {
+        padding-bottom: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Picross Solver</h1>
+    <p style="text-align: center">
+      Click sample to fill some sample clues, and solve to solve that sample
+    </p>
+    <div id="sizeContainer">
+      Height:
+      <select id="height"></select>
+      Width:
+      <select id="width"></select>
+    </div>
+    <table id="table"></table>
+    <div>
+      <button id="solveButton">Solve</button>
+      <button id="sampleButton">Sample</button>
+    </div>
+  </body>
+
+  <script>
+    ("use strict");
+    let wasm;
+    let solve_js;
+    import("./pkg/picross_solver_lib.js").then((module) => {
+      module.default().then((v) => {
+        wasm = v;
+        wasm.init_panic_hook();
+        console.log(wasm);
+      });
+      solve_js = module.solve_js;
+      console.log(module);
+    });
+
+    const heightPicker = document.querySelector("#height");
+    const widthPicker = document.querySelector("#width");
+    const table = document.querySelector("#table");
+    const solveButton = document.querySelector("#solveButton");
+    const sampleButton = document.querySelector("#sampleButton");
+
+    for (const picker of [heightPicker, widthPicker]) {
+      for (const i of [5, 10, 15, 20]) {
+        const option = document.createElement("option");
+        option.value = i;
+        option.title = i;
+        option.innerText = i;
+        picker.appendChild(option);
+      }
+    }
+
+    const inputs = { rows: [], columns: [] };
+    const cells = [];
+
+    const inputHandler = (value, array, index) => {
+      array[index] = value;
+      console.log(inputs);
+    };
+
+    const buildTable = (inputHeight, inputWidth) => {
+      inputs.rows = [];
+      inputs.columns = [];
+      cells.length = 0;
+      const height = +inputHeight;
+      const width = +inputWidth;
+
+      //   Clear the old table
+      table.innerHTML = "";
+      //   We add a header to the table
+      {
+        const header = document.createElement("tr");
+        // First an empty square in the header
+        header.appendChild(document.createElement("div"));
+        for (let x = 0; x < width; x++) {
+          const input = document.createElement("input");
+          input.type = "text";
+          input.addEventListener("change", (e) =>
+            inputHandler(e.target.value, inputs.columns, x)
+          );
+          header.appendChild(input);
+        }
+        table.appendChild(header);
+      }
+      //   We build the table
+      for (let y = 0; y < height; y++) {
+        const row = document.createElement("tr");
+        //   For every row we add the row inputs
+        const input = document.createElement("input");
+        input.type = "text";
+        input.addEventListener("change", (e) =>
+          inputHandler(e.target.value, inputs.rows, y)
+        );
+        row.appendChild(input);
+        const cellRow = [];
+        for (let x = 0; x < width; x++) {
+          const cell = document.createElement("div");
+          cell.className = "unknown";
+          row.appendChild(cell);
+          cellRow.push(cell);
+        }
+        table.appendChild(row);
+        cells.push(cellRow);
+      }
+    };
+
+    buildTable(5, 5);
+
+    heightPicker.addEventListener("change", () =>
+      buildTable(heightPicker.value, widthPicker.value)
+    );
+    widthPicker.addEventListener("change", () =>
+      buildTable(heightPicker.value, widthPicker.value)
+    );
+
+    const validInputRegex = /^[0-9]+(,[0-9]+)*$/;
+
+    const validateInput = (input) => {
+      if (input instanceof Array == false) {
+        return null;
+      }
+      let output = "";
+      for (const clue of input) {
+        if (validInputRegex.test(clue)) {
+          if (output.length != 0) {
+            output += ".";
+          }
+          output += clue;
+        } else {
+          return null;
+        }
+      }
+      return output;
+    };
+
+    solveButton.addEventListener("click", () => {
+      // First we check the input is valid
+      // TODO: len checks
+      const row = validateInput(inputs.rows);
+      if (!row) {
+        alert("All row clues must be filled by comma seperated values");
+        return;
+      }
+      const column = validateInput(inputs.columns);
+      if (!column) {
+        alert("All column clues must be filled by comma seperated values");
+        return;
+      }
+      console.log([row, column]);
+      const solution = solve_js(row, column);
+      console.log(solution);
+      if (solution instanceof Array) {
+        for (const [y, row] of solution.entries()) {
+          for (const [x, cell] of row.entries()) {
+            const cellElement = cells[y][x];
+            cellElement.className = cell ? "full" : "empty";
+            console.log([cell, cellElement]);
+          }
+        }
+      }
+    });
+
+    sampleButton.addEventListener("click", () => {
+      inputs.rows = ["5", "5", "3,1", "2", "5"];
+      inputs.columns = ["3,1", "3,1", "3,1", "2,2", "5"];
+      cells.length = 0;
+      const height = 5;
+      const width = 5;
+
+      //   Clear the old table
+      table.innerHTML = "";
+      //   We add a header to the table
+      {
+        const header = document.createElement("tr");
+        // First an empty square in the header
+        header.appendChild(document.createElement("div"));
+        for (const [x, value] of inputs.columns.entries()) {
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = value;
+          input.addEventListener("change", (e) =>
+            inputHandler(e.target.value, inputs.columns, x)
+          );
+          header.appendChild(input);
+        }
+        table.appendChild(header);
+      }
+      //   We build the table
+      for (const [y, value] of inputs.rows.entries()) {
+        const row = document.createElement("tr");
+        //   For every row we add the row inputs
+        const input = document.createElement("input");
+        input.type = "text";
+        input.value = value;
+        input.addEventListener("change", (e) =>
+          inputHandler(e.target.value, inputs.rows, y)
+        );
+        row.appendChild(input);
+        const cellRow = [];
+        for (let x = 0; x < width; x++) {
+          const cell = document.createElement("div");
+          cell.className = "unknown";
+          row.appendChild(cell);
+          cellRow.push(cell);
+        }
+        table.appendChild(row);
+        cells.push(cellRow);
+      }
+    });
+  </script>
+</html>
